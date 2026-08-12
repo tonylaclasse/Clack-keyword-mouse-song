@@ -40,14 +40,17 @@ voulu par le système.
 C'est la même autorisation qu'un logiciel espion, alors autant être clair : Clack
 ne retient rien, n'écrit rien sur le disque et ne se connecte à aucun réseau. Il
 demande au système la permission d'écouter seulement, jamais de modifier une
-frappe. Tout tient dans un fichier de 360 lignes, `Sources/main.swift`, lisible
+frappe. Tout tient dans un fichier de 417 lignes, `Sources/main.swift`, lisible
 en dix minutes.
 
 ## Le menu
 
 - **Sons activés** : coupe tout d'un clic
-- **Quatre ambiances** : Thock (profond), Clack (claquant), Feutré (discret), Machine à écrire
-- **Clic de souris** : indépendant du clavier
+- **Clavier** : dix ambiances — Thock (profond), Clack (claquant), Feutré (discret),
+  Machine à écrire, Crème (doux et rond), Marbre (aigu et net), Ressort (IBM Model M),
+  Portable (plat et fin), Bois (chaud et creux), Bulle (tout en pop)
+- **Clic de souris** : dix clics au choix — classique, doux, sec, lourd, rétro,
+  gaming, tic, claquant, creux, trackpad — ou *Aucun* pour n'entendre que le clavier
 - **Volume**
 - **Lancer au démarrage**
 
@@ -66,7 +69,10 @@ python3 tools/make_sounds.py && ./build.sh
 
 Pour tester sans reconstruire l'app, déposer ses propres fichiers dans
 `~/Library/Application Support/Clack/Sounds/`, en gardant la même arborescence
-(`thock/down-1.wav`, `up-1.wav`, `space-1.wav`, etc.). L'app les prend en priorité.
+(`thock/down-1.wav`, `up-1.wav`, `space-1.wav`, etc.). L'app les prend en priorité,
+et remplace alors *tous* les sons : ce dossier doit contenir les packs voulus au
+complet. Un dossier dont le nom commence par `mouse` est proposé comme clic de
+souris et n'a pas besoin de `space-*.wav`.
 
 ## Reconstruire
 

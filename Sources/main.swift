@@ -99,17 +99,45 @@ final class SoundBank {
 
 enum Key {
     static let enabled = "enabled"
-    static let mouse = "mouse"
+    static let mousePack = "mousePack"
     static let pack = "pack"
     static let volume = "volume"
 }
 
-let packOrder = ["thock", "clack", "feutre", "machine"]
+/// Les dossiers de Sounds/, dans l'ordre d'affichage. Un pack absent du disque
+/// disparait simplement du menu.
+let packOrder = [
+    "thock", "clack", "feutre", "machine", "creme",
+    "marbre", "ressort", "portable", "bois", "bulle",
+]
 let packNames = [
     "thock": "Thock, profond",
     "clack": "Clack, claquant",
     "feutre": "Feutre, discret",
     "machine": "Machine a ecrire",
+    "creme": "Creme, doux et rond",
+    "marbre": "Marbre, aigu et net",
+    "ressort": "Ressort, IBM Model M",
+    "portable": "Portable, plat et fin",
+    "bois": "Bois, chaud et creux",
+    "bulle": "Bulle, tout en pop",
+]
+
+let mouseOrder = [
+    "mouse", "mouse-doux", "mouse-sec", "mouse-lourd", "mouse-retro",
+    "mouse-gaming", "mouse-tic", "mouse-clac", "mouse-creux", "mouse-trackpad",
+]
+let mouseNames = [
+    "mouse": "Clic classique",
+    "mouse-doux": "Doux, feutre",
+    "mouse-sec": "Sec et aigu",
+    "mouse-lourd": "Lourd et profond",
+    "mouse-retro": "Retro, souris a boule",
+    "mouse-gaming": "Gaming, en deux temps",
+    "mouse-tic": "Tic, a peine audible",
+    "mouse-clac": "Claquant",
+    "mouse-creux": "Creux, coque fine",
+    "mouse-trackpad": "Trackpad, sourd",
 ]
 
 // MARK: - Application
@@ -138,7 +166,7 @@ final class Controller: NSObject, NSMenuDelegate {
 
     override init() {
         defaults.register(defaults: [
-            Key.enabled: true, Key.mouse: true, Key.pack: "thock", Key.volume: 0.7,
+            Key.enabled: true, Key.mousePack: "mouse", Key.pack: "thock", Key.volume: 0.7,
         ])
         // Les sons peuvent etre remplaces sans reconstruire l'app en deposant
         // ses propres fichiers dans ce dossier.
@@ -168,11 +196,11 @@ final class Controller: NSObject, NSMenuDelegate {
         menu.delegate = self
         add("Sons actives", #selector(toggleEnabled))
         menu.addItem(.separator())
-        for pack in packOrder where bank.packs[pack] != nil {
-            add(packNames[pack] ?? pack, #selector(choosePack(_:))).representedObject = pack
-        }
-        menu.addItem(.separator())
-        add("Clic de souris", #selector(toggleMouse))
+        // Vingt sons tiendraient mal dans un menu a plat : deux sous-menus.
+        addSubmenu("Clavier", packOrder.filter { bank.packs[$0] != nil }
+            .map { ($0, packNames[$0] ?? $0) }, currentPack, #selector(choosePack(_:)))
+        addSubmenu("Clic de souris", [("", "Aucun")] + mouseOrder.filter { bank.packs[$0] != nil }
+            .map { ($0, mouseNames[$0] ?? $0) }, currentMouse, #selector(chooseMouse(_:)))
 
         let row = NSView(frame: NSRect(x: 0, y: 0, width: 220, height: 30))
         slider = NSSlider(frame: NSRect(x: 22, y: 5, width: 176, height: 20))
@@ -202,14 +230,33 @@ final class Controller: NSObject, NSMenuDelegate {
         return item
     }
 
+    /// Un sous-menu de choix. Il est son propre delegue, sinon les coches ne
+    /// seraient jamais mises a jour : menuNeedsUpdate ne parle qu'au menu ouvert.
+    private func addSubmenu(_ title: String, _ choices: [(String, String)],
+                            _ selected: String, _ action: Selector) {
+        let sub = NSMenu()
+        sub.delegate = self
+        for (id, name) in choices {
+            let item = NSMenuItem(title: name, action: action, keyEquivalent: "")
+            item.target = self
+            item.representedObject = id
+            item.state = id == selected ? .on : .off  // coche visible des la premiere ouverture
+            sub.addItem(item)
+        }
+        let parent = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        parent.submenu = sub
+        menu.addItem(parent)
+    }
+
     func menuNeedsUpdate(_ menu: NSMenu) {
         let granted = CGPreflightListenEventAccess()
         for item in menu.items {
             switch item.action {
             case #selector(toggleEnabled): item.state = enabled ? .on : .off
-            case #selector(toggleMouse): item.state = defaults.bool(forKey: Key.mouse) ? .on : .off
             case #selector(choosePack(_:)):
                 item.state = (item.representedObject as? String) == currentPack ? .on : .off
+            case #selector(chooseMouse(_:)):
+                item.state = (item.representedObject as? String) == currentMouse ? .on : .off
             default: break
             }
         }
@@ -223,14 +270,12 @@ final class Controller: NSObject, NSMenuDelegate {
 
     private var enabled: Bool { defaults.bool(forKey: Key.enabled) }
     private var currentPack: String { defaults.string(forKey: Key.pack) ?? "thock" }
+    /// Vide : la souris reste muette.
+    private var currentMouse: String { defaults.string(forKey: Key.mousePack) ?? "mouse" }
 
     @objc private func toggleEnabled() {
         defaults.set(!enabled, forKey: Key.enabled)
         refreshIcon()
-    }
-
-    @objc private func toggleMouse() {
-        defaults.set(!defaults.bool(forKey: Key.mouse), forKey: Key.mouse)
     }
 
     @objc private func choosePack(_ sender: NSMenuItem) {
@@ -238,6 +283,13 @@ final class Controller: NSObject, NSMenuDelegate {
         defaults.set(pack, forKey: Key.pack)
         applyPack()
         bank.play(voices.down)  // apercu immediat
+    }
+
+    @objc private func chooseMouse(_ sender: NSMenuItem) {
+        guard let pack = sender.representedObject as? String else { return }
+        defaults.set(pack, forKey: Key.mousePack)
+        applyPack()
+        bank.play(mouseVoices.down)
     }
 
     @objc private func changeVolume(_ sender: NSSlider) {
@@ -261,8 +313,11 @@ final class Controller: NSObject, NSMenuDelegate {
     @objc private func quit() { NSApp.terminate(nil) }
 
     private func applyPack() {
-        voices = bank.packs[currentPack] ?? bank.packs.values.first ?? Voices()
-        mouseVoices = bank.packs["mouse"] ?? Voices()
+        // Repli sur thock : bank.packs n'est pas ordonne, prendre "le premier"
+        // pourrait faire taper le clavier avec un clic de souris.
+        voices = bank.packs[currentPack] ?? bank.packs["thock"] ?? Voices()
+        // Pack de souris vide ou inconnu : play() ne joue rien, donc silence.
+        mouseVoices = bank.packs[currentMouse] ?? Voices()
     }
 
     private func refreshIcon() {
@@ -345,10 +400,10 @@ final class Controller: NSObject, NSMenuDelegate {
             lastFlags = flags
 
         case .leftMouseDown, .rightMouseDown, .otherMouseDown:
-            if enabled, defaults.bool(forKey: Key.mouse) { bank.play(mouseVoices.down) }
+            if enabled { bank.play(mouseVoices.down) }
 
         case .leftMouseUp, .rightMouseUp, .otherMouseUp:
-            if enabled, defaults.bool(forKey: Key.mouse) { bank.play(mouseVoices.up) }
+            if enabled { bank.play(mouseVoices.up) }
 
         default:
             break
