@@ -1,23 +1,23 @@
-// Clack : le bruit d'un clavier mecanique et d'un clic de souris,
-// depuis la barre de menus du Mac.
+// Clack: the sound of a mechanical keyboard and of a mouse click,
+// from the Mac menu bar.
 
 import AppKit
 import AVFoundation
 import ServiceManagement
 
-// MARK: - Sons
+// MARK: - Sounds
 
-/// Les sons d'une ambiance : frappe, relachement, barre d'espace.
-/// Trois variantes de chacun, tirees au hasard, pour ne pas sonner robotique.
+/// The sounds of one pack: press, release, space bar.
+/// Three variants of each, picked at random, so it does not sound robotic.
 struct Voices {
     var down: [AVAudioPCMBuffer] = []
     var up: [AVAudioPCMBuffer] = []
     var space: [AVAudioPCMBuffer] = []
 }
 
-/// Tous les sons sont charges en memoire au lancement et les lecteurs tournent
-/// en permanence : au moment de la frappe il ne reste qu'a jouer, d'ou la
-/// latence quasi nulle.
+/// Every sound is loaded into memory at launch and the players run all the
+/// time: when a key is pressed there is nothing left to do but play, hence the
+/// near-zero latency.
 final class SoundBank {
     private let engine = AVAudioEngine()
     private var players: [AVAudioPlayerNode] = []
@@ -26,8 +26,8 @@ final class SoundBank {
     private var level: Float = 0.7
     private(set) var packs: [String: Voices] = [:]
 
-    /// Nombre de sons pouvant se chevaucher. Au-dela de douze frappes en moins
-    /// de cent millisecondes, plus personne ne tape aussi vite.
+    /// How many sounds can overlap. Past twelve keystrokes in under a hundred
+    /// milliseconds, nobody types that fast.
     private static let voiceCount = 12
 
     init(soundsDir: URL) {
@@ -43,8 +43,8 @@ final class SoundBank {
         }
         format = packs.values.first?.down.first?.format
         buildGraph()
-        // Brancher un casque ou changer de sortie audio arrete le moteur :
-        // sans ca, l'app devient muette jusqu'au prochain lancement.
+        // Plugging in headphones or switching audio output stops the engine:
+        // without this, the app goes silent until the next launch.
         NotificationCenter.default.addObserver(
             forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
         ) { [weak self] _ in self?.buildGraph() }
@@ -89,13 +89,13 @@ final class SoundBank {
         guard engine.isRunning, let buffer = variants.randomElement() else { return }
         let player = players[next]
         next = (next + 1) % players.count
-        player.volume = Float.random(in: 0.90...1.0)  // deux frappes ne sonnent jamais pareil
+        player.volume = Float.random(in: 0.90...1.0)  // no two keystrokes sound alike
         player.scheduleBuffer(buffer, at: nil, options: .interrupts, completionHandler: nil)
         if !player.isPlaying { player.play() }
     }
 }
 
-// MARK: - Reglages
+// MARK: - Settings
 
 enum Key {
     static let enabled = "enabled"
@@ -104,40 +104,40 @@ enum Key {
     static let volume = "volume"
 }
 
-/// Les dossiers de Sounds/, dans l'ordre d'affichage. Un pack absent du disque
-/// disparait simplement du menu.
+/// The folders in Sounds/, in display order. A pack missing from disk simply
+/// disappears from the menu.
 let packOrder = [
-    "thock", "clack", "feutre", "machine", "creme",
-    "marbre", "ressort", "portable", "bois", "bulle",
+    "thock", "clack", "felt", "typewriter", "cream",
+    "marble", "spring", "laptop", "wood", "bubble",
 ]
 let packNames = [
-    "thock": "Thock, profond",
-    "clack": "Clack, claquant",
-    "feutre": "Feutre, discret",
-    "machine": "Machine a ecrire",
-    "creme": "Creme, doux et rond",
-    "marbre": "Marbre, aigu et net",
-    "ressort": "Ressort, IBM Model M",
-    "portable": "Portable, plat et fin",
-    "bois": "Bois, chaud et creux",
-    "bulle": "Bulle, tout en pop",
+    "thock": "Thock, deep",
+    "clack": "Clack, clacky",
+    "felt": "Felt, quiet",
+    "typewriter": "Typewriter",
+    "cream": "Cream, soft and round",
+    "marble": "Marble, bright and crisp",
+    "spring": "Spring, IBM Model M",
+    "laptop": "Laptop, flat and thin",
+    "wood": "Wood, warm and hollow",
+    "bubble": "Bubble, all pop",
 ]
 
 let mouseOrder = [
-    "mouse", "mouse-doux", "mouse-sec", "mouse-lourd", "mouse-retro",
-    "mouse-gaming", "mouse-tic", "mouse-clac", "mouse-creux", "mouse-trackpad",
+    "mouse", "mouse-soft", "mouse-sharp", "mouse-heavy", "mouse-retro",
+    "mouse-gaming", "mouse-tick", "mouse-clacky", "mouse-hollow", "mouse-trackpad",
 ]
 let mouseNames = [
-    "mouse": "Clic classique",
-    "mouse-doux": "Doux, feutre",
-    "mouse-sec": "Sec et aigu",
-    "mouse-lourd": "Lourd et profond",
-    "mouse-retro": "Retro, souris a boule",
-    "mouse-gaming": "Gaming, en deux temps",
-    "mouse-tic": "Tic, a peine audible",
-    "mouse-clac": "Claquant",
-    "mouse-creux": "Creux, coque fine",
-    "mouse-trackpad": "Trackpad, sourd",
+    "mouse": "Classic click",
+    "mouse-soft": "Soft, muted",
+    "mouse-sharp": "Dry and sharp",
+    "mouse-heavy": "Heavy and deep",
+    "mouse-retro": "Retro, ball mouse",
+    "mouse-gaming": "Gaming, two-stage",
+    "mouse-tick": "Tick, barely audible",
+    "mouse-clacky": "Clacky",
+    "mouse-hollow": "Hollow, thin shell",
+    "mouse-trackpad": "Trackpad, dull",
 ]
 
 // MARK: - Application
@@ -157,8 +157,8 @@ final class Controller: NSObject, NSMenuDelegate {
     private var voices = Voices()
     private var mouseVoices = Voices()
 
-    /// Seuls les bits des touches de modification nous interessent : le reste
-    /// des indicateurs change tout le temps et ferait sonner dans le vide.
+    /// Only the modifier-key bits matter to us: the rest of the flags change
+    /// all the time and would make the app play sounds for nothing.
     private static let modifierMask = CGEventFlags([
         .maskAlphaShift, .maskShift, .maskControl,
         .maskAlternate, .maskCommand, .maskSecondaryFn,
@@ -168,8 +168,8 @@ final class Controller: NSObject, NSMenuDelegate {
         defaults.register(defaults: [
             Key.enabled: true, Key.mousePack: "mouse", Key.pack: "thock", Key.volume: 0.7,
         ])
-        // Les sons peuvent etre remplaces sans reconstruire l'app en deposant
-        // ses propres fichiers dans ce dossier.
+        // The sounds can be replaced without rebuilding the app by dropping
+        // your own files into this folder.
         let override = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/Clack/Sounds")
         let bundled = Bundle.main.resourceURL!.appendingPathComponent("Sounds")
@@ -178,7 +178,7 @@ final class Controller: NSObject, NSMenuDelegate {
         super.init()
 
         guard !bank.packs.isEmpty else {
-            alert("Sons introuvables", "Aucun son n'a pu etre charge depuis \(dir.path).")
+            alert("No sounds found", "No sound could be loaded from \(dir.path).")
             exit(1)
         }
         bank.volume = defaults.float(forKey: Key.volume)
@@ -194,12 +194,12 @@ final class Controller: NSObject, NSMenuDelegate {
 
     private func buildMenu() {
         menu.delegate = self
-        add("Sons actives", #selector(toggleEnabled))
+        add("Sounds enabled", #selector(toggleEnabled))
         menu.addItem(.separator())
-        // Vingt sons tiendraient mal dans un menu a plat : deux sous-menus.
-        addSubmenu("Clavier", packOrder.filter { bank.packs[$0] != nil }
+        // Twenty sounds would sit badly in a flat menu: two submenus.
+        addSubmenu("Keyboard", packOrder.filter { bank.packs[$0] != nil }
             .map { ($0, packNames[$0] ?? $0) }, currentPack, #selector(choosePack(_:)))
-        addSubmenu("Clic de souris", [("", "Aucun")] + mouseOrder.filter { bank.packs[$0] != nil }
+        addSubmenu("Mouse click", [("", "None")] + mouseOrder.filter { bank.packs[$0] != nil }
             .map { ($0, mouseNames[$0] ?? $0) }, currentMouse, #selector(chooseMouse(_:)))
 
         let row = NSView(frame: NSRect(x: 0, y: 0, width: 220, height: 30))
@@ -215,10 +215,10 @@ final class Controller: NSObject, NSMenuDelegate {
         menu.addItem(volumeItem)
 
         menu.addItem(.separator())
-        loginItem = add("Lancer au demarrage", #selector(toggleLogin))
-        permissionItem = add("Autoriser dans Reglages Systeme...", #selector(openSettings))
+        loginItem = add("Open at login", #selector(toggleLogin))
+        permissionItem = add("Allow in System Settings...", #selector(openSettings))
         menu.addItem(.separator())
-        add("Quitter Clack", #selector(quit))
+        add("Quit Clack", #selector(quit))
         status.menu = menu
     }
 
@@ -230,8 +230,8 @@ final class Controller: NSObject, NSMenuDelegate {
         return item
     }
 
-    /// Un sous-menu de choix. Il est son propre delegue, sinon les coches ne
-    /// seraient jamais mises a jour : menuNeedsUpdate ne parle qu'au menu ouvert.
+    /// A submenu of choices. It is its own delegate, otherwise the check marks
+    /// would never be updated: menuNeedsUpdate only talks to the open menu.
     private func addSubmenu(_ title: String, _ choices: [(String, String)],
                             _ selected: String, _ action: Selector) {
         let sub = NSMenu()
@@ -240,7 +240,7 @@ final class Controller: NSObject, NSMenuDelegate {
             let item = NSMenuItem(title: name, action: action, keyEquivalent: "")
             item.target = self
             item.representedObject = id
-            item.state = id == selected ? .on : .off  // coche visible des la premiere ouverture
+            item.state = id == selected ? .on : .off  // check mark shown on first open
             sub.addItem(item)
         }
         let parent = NSMenuItem(title: title, action: nil, keyEquivalent: "")
@@ -261,7 +261,7 @@ final class Controller: NSObject, NSMenuDelegate {
             }
         }
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
-        // Tant que l'autorisation manque, l'app n'entend rien : on le dit.
+        // As long as permission is missing, the app hears nothing: say so.
         permissionItem.isHidden = granted && tap != nil
         slider.floatValue = bank.volume
     }
@@ -270,7 +270,7 @@ final class Controller: NSObject, NSMenuDelegate {
 
     private var enabled: Bool { defaults.bool(forKey: Key.enabled) }
     private var currentPack: String { defaults.string(forKey: Key.pack) ?? "thock" }
-    /// Vide : la souris reste muette.
+    /// Empty: the mouse stays silent.
     private var currentMouse: String { defaults.string(forKey: Key.mousePack) ?? "mouse" }
 
     @objc private func toggleEnabled() {
@@ -282,7 +282,7 @@ final class Controller: NSObject, NSMenuDelegate {
         guard let pack = sender.representedObject as? String else { return }
         defaults.set(pack, forKey: Key.pack)
         applyPack()
-        bank.play(voices.down)  // apercu immediat
+        bank.play(voices.down)  // instant preview
     }
 
     @objc private func chooseMouse(_ sender: NSMenuItem) {
@@ -313,10 +313,10 @@ final class Controller: NSObject, NSMenuDelegate {
     @objc private func quit() { NSApp.terminate(nil) }
 
     private func applyPack() {
-        // Repli sur thock : bank.packs n'est pas ordonne, prendre "le premier"
-        // pourrait faire taper le clavier avec un clic de souris.
+        // Fall back to thock: bank.packs is unordered, taking "the first one"
+        // could make the keyboard type with a mouse click.
         voices = bank.packs[currentPack] ?? bank.packs["thock"] ?? Voices()
-        // Pack de souris vide ou inconnu : play() ne joue rien, donc silence.
+        // Empty or unknown mouse pack: play() plays nothing, so silence.
         mouseVoices = bank.packs[currentMouse] ?? Voices()
     }
 
@@ -332,7 +332,7 @@ final class Controller: NSObject, NSMenuDelegate {
         panel.runModal()
     }
 
-    // MARK: Ecoute du clavier et de la souris
+    // MARK: Listening to the keyboard and the mouse
 
     private func startTap() {
         let mask: CGEventMask =
@@ -349,7 +349,7 @@ final class Controller: NSObject, NSMenuDelegate {
         guard let port = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
             place: .headInsertEventTap,
-            options: .listenOnly,  // on ecoute, on ne modifie jamais rien
+            options: .listenOnly,  // we listen, we never modify anything
             eventsOfInterest: mask,
             callback: { _, type, event, refcon in
                 Unmanaged<Controller>.fromOpaque(refcon!).takeUnretainedValue().handle(type, event)
@@ -357,9 +357,9 @@ final class Controller: NSObject, NSMenuDelegate {
             },
             userInfo: Unmanaged.passUnretained(self).toOpaque()
         ) else {
-            // Autorisation pas encore accordee : on retente jusqu'a ce qu'elle le soit.
+            // Permission not granted yet: keep retrying until it is.
             if retry == nil {
-                NSLog("Clack : autorisation Surveillance de la saisie manquante")
+                NSLog("Clack: Input Monitoring permission missing")
                 retry = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
                     self?.startTap()
                 }
@@ -369,9 +369,9 @@ final class Controller: NSObject, NSMenuDelegate {
         tap = port
         retry?.invalidate()
         retry = nil
-        NSLog("Clack : ecoute active")
+        NSLog("Clack: listening")
         let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, port, 0)
-        // commonModes : les touches sonnent aussi pendant qu'un menu est ouvert.
+        // commonModes: keys still sound while a menu is open.
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: port, enable: true)
     }
@@ -379,14 +379,14 @@ final class Controller: NSObject, NSMenuDelegate {
     fileprivate func handle(_ type: CGEventType, _ event: CGEvent) {
         switch type {
         case .tapDisabledByTimeout, .tapDisabledByUserInput:
-            // Le systeme coupe parfois l'ecoute : la relancer, sinon silence definitif.
+            // The system sometimes cuts the tap off: restart it, or it is silent for good.
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
 
         case .keyDown:
             guard enabled else { return }
             guard event.getIntegerValueField(.keyboardEventAutorepeat) == 0 else { return }
             let code = event.getIntegerValueField(.keyboardEventKeycode)
-            bank.play(code == 49 ? voices.space : voices.down)  // 49 = barre d'espace
+            bank.play(code == 49 ? voices.space : voices.down)  // 49 = space bar
 
         case .keyUp:
             guard enabled else { return }
@@ -395,7 +395,7 @@ final class Controller: NSObject, NSMenuDelegate {
         case .flagsChanged:
             guard enabled else { return }
             let flags = event.flags.rawValue & Self.modifierMask
-            // Un bit qui s'allume est un appui, un bit qui s'eteint un relachement.
+            // A bit turning on is a press, a bit turning off is a release.
             bank.play((flags & ~lastFlags) != 0 ? voices.down : voices.up)
             lastFlags = flags
 
@@ -412,6 +412,6 @@ final class Controller: NSObject, NSMenuDelegate {
 }
 
 let app = NSApplication.shared
-app.setActivationPolicy(.accessory)  // pas d'icone dans le Dock, pas de fenetre
+app.setActivationPolicy(.accessory)  // no Dock icon, no window
 let controller = Controller()
 app.run()

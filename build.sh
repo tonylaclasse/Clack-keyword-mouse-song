@@ -1,5 +1,5 @@
 #!/bin/bash
-# Construit Clack.app et l'installe dans /Applications, puis le lance.
+# Builds Clack.app, installs it into /Applications, then launches it.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -17,22 +17,22 @@ swiftc -O -swift-version 5 -target "$(uname -m)-apple-macos13.0" \
 cp Sources/Info.plist "$BUILD/Contents/Info.plist"
 cp -R Sounds "$BUILD/Contents/Resources/Sounds"
 
-# ponytail: signature locale ad hoc, faute de certificat Apple sur ce Mac.
-# Consequence : chaque reconstruction change l'identite de l'app aux yeux de
-# macOS, donc l'autorisation "Surveillance de la saisie" est a redonner.
-# Pour y couper, il faudrait un certificat Developer ID.
+# ponytail: ad hoc local signature, for lack of an Apple certificate on this Mac.
+# Consequence: every rebuild changes the identity of the app in the eyes of
+# macOS, so the "Input Monitoring" permission has to be granted again.
+# A Developer ID certificate would remove that step.
 codesign --force --sign - "$BUILD"
 
 pkill -x Clack 2>/dev/null || true
 sleep 1
 
-# L'app reconstruite n'est plus la meme aux yeux de macOS : sans ce nettoyage,
-# l'ancienne autorisation reste cochee dans les Reglages mais ne marche plus,
-# et l'app est muette sans rien dire. On repart d'une demande neuve.
+# The rebuilt app is no longer the same one in the eyes of macOS: without this
+# cleanup the old permission stays ticked in Settings but no longer works, and
+# the app is silent without saying a word. Start from a fresh request instead.
 tccutil reset ListenEvent com.anthonywitz.clack >/dev/null 2>&1 || true
 if [ -d "$APP" ]; then
 	trash "$APP" 2>/dev/null || rm -rf "$APP"
 fi
 cp -R "$BUILD" "$APP"
 open "$APP"
-echo "Clack installe dans $APP et lance."
+echo "Clack installed in $APP and launched."

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Fabrique les sons de Clack (WAV 48 kHz mono 16 bits).
+"""Build Clack's sounds (16-bit mono 48 kHz WAV).
 
-Aucune dependance : uniquement la bibliotheque standard.
-Les sons sont synthetises, donc libres de droits et modifiables ici meme.
+No dependencies: standard library only.
+The sounds are synthesised, so they are royalty-free and editable right here.
 
-Recette d'un clic : une bouffee de bruit tres courte (le contact plastique)
-posee sur des sinusoides amorties (la resonance du boitier).
+Recipe for a click: a very short burst of noise (the plastic contact) laid
+over damped sine waves (the resonance of the case).
 
-    python3 tools/make_sounds.py          # genere Sounds/
-    python3 tools/make_sounds.py --check  # verifie ce qui a ete genere
+    python3 tools/make_sounds.py          # generates Sounds/
+    python3 tools/make_sounds.py --check  # checks what was generated
 """
 
 import itertools
@@ -20,14 +20,14 @@ import sys
 import wave
 
 SR = 48000
-VARIANTS = 3  # trois versions de chaque son, tirees au hasard a la frappe
+VARIANTS = 3  # three versions of every sound, picked at random on each key
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Sounds")
 
-# --- briques de synthese -----------------------------------------------------
+# --- synthesis building blocks -----------------------------------------------
 
 
 def lowpass(x, fc):
-    """Filtre passe-bas 1 pole : coupe les aigus au-dessus de fc."""
+    """One-pole low-pass filter: cuts the highs above fc."""
     a = 1.0 - math.exp(-2.0 * math.pi * fc / SR)
     y = 0.0
     out = []
@@ -38,13 +38,13 @@ def lowpass(x, fc):
 
 
 def highpass(x, fc):
-    """Passe-haut 1 pole : le signal moins ses graves."""
+    """One-pole high-pass filter: the signal minus its lows."""
     lp = lowpass(x, fc)
     return [v - l for v, l in zip(x, lp)]
 
 
 def burst(buf, rng, amp, tau, hp, lp, offset=0.0):
-    """Bouffee de bruit filtree, en decroissance exponentielle."""
+    """Filtered burst of noise, decaying exponentially."""
     n = min(int(tau * 12 * SR) + 8, len(buf))
     noise = [rng.uniform(-1.0, 1.0) for _ in range(n)]
     noise = lowpass(highpass(noise, hp), lp)
@@ -57,10 +57,10 @@ def burst(buf, rng, amp, tau, hp, lp, offset=0.0):
 
 
 def body(buf, freq, amp, tau, offset=0.0):
-    """Sinusoide amortie : la resonance du boitier ou de la touche.
+    """Damped sine wave: the resonance of the case or of the key.
 
-    Le decalage sert aux sons en deux temps, tel le ressort qui claque puis
-    chante une fraction de milliseconde plus tard.
+    The offset is there for two-stage sounds, like the spring that snaps then
+    sings a fraction of a millisecond later.
     """
     start = int(offset * SR)
     n = min(int(tau * 9 * SR) + 8, len(buf) - start)
@@ -74,7 +74,7 @@ def render(spec, seed):
     buf = [0.0] * int(spec["dur"] * SR)
     for b in spec["bursts"]:
         burst(buf, rng, *b)
-    # chaque variante desaccorde legerement la resonance : evite l'effet robot
+    # each variant detunes the resonance slightly: avoids the robot effect
     for freq, amp, tau, *rest in spec["body"]:
         body(buf, freq * rng.uniform(0.96, 1.04), amp * rng.uniform(0.92, 1.06), tau,
              rest[0] if rest else 0.0)
@@ -83,7 +83,7 @@ def render(spec, seed):
 
 
 def fade(buf):
-    """Rampes tres courtes aux deux bouts pour ne pas claquer."""
+    """Very short ramps at both ends so the sound does not pop."""
     n_in, n_out = int(0.0002 * SR), int(0.002 * SR)
     for i in range(min(n_in, len(buf))):
         buf[i] *= i / n_in
@@ -103,14 +103,14 @@ def write_wav(path, samples):
         w.writeframes(frames)
 
 
-# --- les ambiances -----------------------------------------------------------
-# bursts : (amplitude, duree de decroissance, coupe-bas, coupe-haut, decalage)
-# body   : (frequence, amplitude, duree de decroissance, decalage)
-# Un pack dont le nom commence par "mouse" est un clic de souris : pas de barre
-# d'espace, et l'app le propose dans un menu separe.
+# --- the sound packs ---------------------------------------------------------
+# bursts: (amplitude, decay time, high-pass cutoff, low-pass cutoff, offset)
+# body  : (frequency, amplitude, decay time, offset)
+# A pack whose name starts with "mouse" is a mouse click: no space bar, and the
+# app offers it in a separate menu.
 
 PACKS = {
-    # profond et amorti, facon clavier moderne rempli de mousse
+    # deep and damped, like a modern foam-filled keyboard
     "thock": {
         "gain": 0.82,
         "down": {
@@ -129,7 +129,7 @@ PACKS = {
             "body": [(115, 1.00, 0.030), (225, 0.35, 0.018), (72, 0.50, 0.035)],
         },
     },
-    # sec et brillant, facon switch a clic
+    # dry and bright, like a clicky switch
     "clack": {
         "gain": 0.90,
         "down": {
@@ -148,8 +148,8 @@ PACKS = {
             "body": [(900, 0.40, 0.008), (300, 0.45, 0.014)],
         },
     },
-    # discret, utilisable en open space
-    "feutre": {
+    # quiet, usable in an open-plan office
+    "felt": {
         "gain": 0.48,
         "down": {
             "dur": 0.070,
@@ -167,8 +167,8 @@ PACKS = {
             "body": [(88, 0.80, 0.030)],
         },
     },
-    # metallique et resonant, facon machine a ecrire
-    "machine": {
+    # metallic and resonant, like a typewriter
+    "typewriter": {
         "gain": 0.85,
         "down": {
             "dur": 0.140,
@@ -191,8 +191,8 @@ PACKS = {
             "body": [(70, 0.90, 0.050), (1600, 0.30, 0.030), (2500, 0.15, 0.020)],
         },
     },
-    # rond et doux, facon switch lineaire lubrifie
-    "creme": {
+    # round and soft, like a lubed linear switch
+    "cream": {
         "gain": 0.78,
         "down": {
             "dur": 0.075,
@@ -210,8 +210,8 @@ PACKS = {
             "body": [(160, 0.95, 0.024), (310, 0.30, 0.014)],
         },
     },
-    # aigu et net, le "poc" d'un clavier a plaque rigide
-    "marbre": {
+    # bright and crisp, the "pock" of a keyboard with a rigid plate
+    "marble": {
         "gain": 0.80,
         "down": {
             "dur": 0.060,
@@ -229,8 +229,8 @@ PACKS = {
             "body": [(520, 0.65, 0.016), (250, 0.35, 0.020)],
         },
     },
-    # le claquement puis le chant du ressort, facon IBM Model M
-    "ressort": {
+    # the snap then the song of the spring, like an IBM Model M
+    "spring": {
         "gain": 0.88,
         "down": {
             "dur": 0.200,
@@ -257,8 +257,8 @@ PACKS = {
             ],
         },
     },
-    # plat et fin, le clavier d'un portable
-    "portable": {
+    # flat and thin, a laptop keyboard
+    "laptop": {
         "gain": 0.62,
         "down": {
             "dur": 0.040,
@@ -276,8 +276,8 @@ PACKS = {
             "body": [(430, 0.45, 0.009), (210, 0.25, 0.012)],
         },
     },
-    # chaud et creux, une caisse en bois
-    "bois": {
+    # warm and hollow, a wooden case
+    "wood": {
         "gain": 0.80,
         "down": {
             "dur": 0.110,
@@ -295,8 +295,8 @@ PACKS = {
             "body": [(200, 0.90, 0.038), (400, 0.30, 0.022)],
         },
     },
-    # presque pas de bruit de contact : une bulle qui eclate
-    "bulle": {
+    # almost no contact noise: a bubble popping
+    "bubble": {
         "gain": 0.72,
         "down": {
             "dur": 0.050,
@@ -314,8 +314,8 @@ PACKS = {
             "body": [(360, 1.00, 0.012), (720, 0.22, 0.006)],
         },
     },
-    # --- les clics de souris : tres courts, sans barre d'espace ---------------
-    # le clic classique
+    # --- the mouse clicks: very short, no space bar ---------------------------
+    # the classic click
     "mouse": {
         "gain": 0.75,
         "down": {
@@ -329,8 +329,8 @@ PACKS = {
             "body": [(2000, 0.20, 0.003)],
         },
     },
-    # feutre, pour travailler a cote de quelqu'un
-    "mouse-doux": {
+    # muted, for working next to someone
+    "mouse-soft": {
         "gain": 0.55,
         "down": {
             "dur": 0.026,
@@ -343,8 +343,8 @@ PACKS = {
             "body": [(900, 0.15, 0.003)],
         },
     },
-    # sec et aigu, presque un declic de stylo
-    "mouse-sec": {
+    # dry and sharp, almost a pen click
+    "mouse-sharp": {
         "gain": 0.80,
         "down": {
             "dur": 0.022,
@@ -357,8 +357,8 @@ PACKS = {
             "body": [(3100, 0.15, 0.002)],
         },
     },
-    # lourd et profond, un gros bouton
-    "mouse-lourd": {
+    # heavy and deep, a big button
+    "mouse-heavy": {
         "gain": 0.85,
         "down": {
             "dur": 0.055,
@@ -371,7 +371,7 @@ PACKS = {
             "body": [(420, 0.30, 0.008)],
         },
     },
-    # plastique creux, la souris a boule des annees 90
+    # hollow plastic, the ball mouse of the 90s
     "mouse-retro": {
         "gain": 0.82,
         "down": {
@@ -385,7 +385,7 @@ PACKS = {
             "body": [(1200, 0.25, 0.006)],
         },
     },
-    # deux temps tres rapproches : la course puis le declic
+    # two stages very close together: the travel then the click
     "mouse-gaming": {
         "gain": 0.78,
         "down": {
@@ -399,8 +399,8 @@ PACKS = {
             "body": [(4000, 0.14, 0.0015)],
         },
     },
-    # un tic minuscule, a peine audible
-    "mouse-tic": {
+    # a tiny tick, barely audible
+    "mouse-tick": {
         "gain": 0.50,
         "down": {
             "dur": 0.018,
@@ -413,8 +413,8 @@ PACKS = {
             "body": [(6000, 0.08, 0.0010)],
         },
     },
-    # claquant, on l'entend d'un bout a l'autre de la piece
-    "mouse-clac": {
+    # clacky, you hear it from across the room
+    "mouse-clacky": {
         "gain": 0.90,
         "down": {
             "dur": 0.040,
@@ -427,8 +427,8 @@ PACKS = {
             "body": [(1600, 0.20, 0.004)],
         },
     },
-    # coque fine qui resonne apres le clic
-    "mouse-creux": {
+    # thin shell ringing after the click
+    "mouse-hollow": {
         "gain": 0.70,
         "down": {
             "dur": 0.060,
@@ -441,7 +441,7 @@ PACKS = {
             "body": [(1050, 0.30, 0.010)],
         },
     },
-    # sourd et mat, le clic d'un trackpad
+    # dull and matte, the click of a trackpad
     "mouse-trackpad": {
         "gain": 0.65,
         "down": {
@@ -466,23 +466,23 @@ def build():
             if kind == "gain":
                 continue
             for v in range(VARIANTS):
-                # graine fixe : regenerer donne exactement les memes fichiers
+                # fixed seed: regenerating gives exactly the same files
                 samples = render(spec, f"{pack}/{kind}/{v}")
                 rendered[(kind, v)] = samples
                 peak = max(peak, max(abs(s) for s in samples))
-        # un seul volume de reference par ambiance : la relache reste plus
-        # discrete que la frappe, et "feutre" reste plus doux que "clack"
+        # one reference level per pack: the release stays quieter than the
+        # press, and "felt" stays softer than "clack"
         scale = (0.92 / peak) * cfg["gain"]
         for (kind, v), samples in rendered.items():
             write_wav(
                 os.path.join(OUT, pack, f"{kind}-{v + 1}.wav"), [s * scale for s in samples]
             )
-        print(f"{pack}: {len(rendered)} sons")
+        print(f"{pack}: {len(rendered)} sounds")
 
 
 def signature(vals):
-    """Trois mesures qui suffisent a separer deux sons a l'oreille : duree,
-    brillance (passages par zero) et temps de decroissance."""
+    """Three measures that are enough to tell two sounds apart by ear:
+    duration, brightness (zero crossings) and decay time."""
     peak = max(abs(s) for s in vals)
     head = vals[: int(0.020 * SR)]
     crossings = sum(1 for a, b in zip(head, head[1:]) if (a >= 0) != (b >= 0))
@@ -491,7 +491,7 @@ def signature(vals):
 
 
 def check():
-    """Verifie que ce qui a ete ecrit est jouable et n'est pas du silence."""
+    """Checks that what was written is playable and is not silence."""
     total = 0
     sigs = {}
     for pack, cfg in PACKS.items():
@@ -500,7 +500,7 @@ def check():
             seen = []
             for v in range(1, VARIANTS + 1):
                 path = os.path.join(OUT, pack, f"{kind}-{v}.wav")
-                assert os.path.exists(path), f"manquant : {path}"
+                assert os.path.exists(path), f"missing: {path}"
                 with wave.open(path, "rb") as w:
                     assert w.getframerate() == SR, path
                     assert w.getnchannels() == 1, path
@@ -508,24 +508,24 @@ def check():
                     raw = w.readframes(w.getnframes())
                 vals = struct.unpack(f"<{len(raw) // 2}h", raw)
                 peak = max(abs(s) for s in vals) / 32768.0
-                assert 0.02 < peak <= 1.0, f"{path} : niveau {peak:.3f} hors limites"
+                assert 0.02 < peak <= 1.0, f"{path}: level {peak:.3f} out of range"
                 dur = len(vals) / SR
-                assert 0.010 < dur < 0.30, f"{path} : duree {dur:.3f}s hors limites"
-                assert raw not in seen, f"{path} : variante identique a une autre"
+                assert 0.010 < dur < 0.30, f"{path}: duration {dur:.3f}s out of range"
+                assert raw not in seen, f"{path}: variant identical to another"
                 seen.append(raw)
                 if kind == "down" and v == 1:
                     sigs[pack] = signature(vals)
                 total += 1
 
-    # Le but du lot est d'offrir des sons differents : deux packs de la meme
-    # famille doivent s'ecarter d'au moins 15 % sur une des trois mesures.
+    # The point of the set is to offer different sounds: two packs of the same
+    # family must differ by at least 15% on one of the three measures.
     for family in (False, True):
         names = [p for p in sigs if p.startswith("mouse") is family]
         for a, b in itertools.combinations(names, 2):
             spread = max(abs(x - y) / max(x, y) for x, y in zip(sigs[a], sigs[b]))
-            assert spread > 0.15, f"{a} et {b} sonnent pareil (ecart {spread:.0%})"
+            assert spread > 0.15, f"{a} and {b} sound the same (spread {spread:.0%})"
 
-    print(f"OK : {total} fichiers valides, {len(sigs)} packs distincts")
+    print(f"OK: {total} valid files, {len(sigs)} distinct packs")
 
 
 if __name__ == "__main__":

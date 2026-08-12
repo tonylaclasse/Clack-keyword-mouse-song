@@ -1,82 +1,82 @@
 # Clack
 
-Le bruit d'un clavier mécanique et d'un clic de souris, depuis la barre de menus du Mac.
+The sound of a mechanical keyboard and of a mouse click, from the Mac menu bar.
 
-## Installer
+## Install
 
-macOS 13 ou plus récent, sur Mac Intel comme Apple Silicon. Il faut les outils de
-développement d'Apple, gratuits, une seule fois :
+macOS 13 or later, on Intel Macs as well as Apple Silicon. You need Apple's
+developer tools, free, once and for all:
 
 ```
 xcode-select --install
 ```
 
-Puis, dans le dossier du projet :
+Then, in the project folder:
 
 ```
 ./build.sh
 ```
 
-Le script compile l'app, la copie dans `/Applications` et la lance. Elle n'a pas
-d'icône dans le Dock ni de fenêtre : tout se passe depuis l'icône clavier en haut
-à droite. S'il y avait déjà une version installée, elle est remplacée.
+The script builds the app, copies it into `/Applications` and launches it. It
+has no Dock icon and no window: everything happens from the keyboard icon in the
+top right. If a version was already installed, it is replaced.
 
-Construire l'app soi-même évite le blocage de macOS sur les apps téléchargées
-sans certificat Apple.
+Building the app yourself avoids the macOS block on apps downloaded without an
+Apple certificate.
 
-## L'autorisation, à faire une fois
+## The permission, once
 
-macOS interdit à toute app d'entendre le clavier tant qu'on ne l'a pas autorisée.
+macOS forbids any app from hearing the keyboard until you allow it.
 
-1. Réglages Système, Confidentialité et sécurité, **Surveillance de la saisie**
-2. Cocher **Clack**
+1. System Settings, Privacy & Security, **Input Monitoring**
+2. Tick **Clack**
 
-Tant que ce n'est pas fait, le menu affiche « Autoriser dans Réglages Système ».
-Une fois coché, le son démarre dans les deux secondes, sans relancer l'app.
+Until that is done, the menu shows "Allow in System Settings". Once ticked, the
+sound starts within two seconds, without relaunching the app.
 
-Dans un champ mot de passe, macOS coupe l'accès au clavier : silence total. C'est
-voulu par le système.
+In a password field, macOS cuts off keyboard access: total silence. That is the
+system doing its job.
 
-C'est la même autorisation qu'un logiciel espion, alors autant être clair : Clack
-ne retient rien, n'écrit rien sur le disque et ne se connecte à aucun réseau. Il
-demande au système la permission d'écouter seulement, jamais de modifier une
-frappe. Tout tient dans un fichier de 417 lignes, `Sources/main.swift`, lisible
-en dix minutes.
+This is the same permission spyware asks for, so let's be clear: Clack keeps
+nothing, writes nothing to disk and connects to no network. It asks the system
+for permission to listen only, never to modify a keystroke. All of it fits in one
+417-line file, `Sources/main.swift`, readable in ten minutes.
 
-## Le menu
+## The menu
 
-- **Sons activés** : coupe tout d'un clic
-- **Clavier** : dix ambiances — Thock (profond), Clack (claquant), Feutré (discret),
-  Machine à écrire, Crème (doux et rond), Marbre (aigu et net), Ressort (IBM Model M),
-  Portable (plat et fin), Bois (chaud et creux), Bulle (tout en pop)
-- **Clic de souris** : dix clics au choix — classique, doux, sec, lourd, rétro,
-  gaming, tic, claquant, creux, trackpad — ou *Aucun* pour n'entendre que le clavier
+- **Sounds enabled**: mutes everything in one click
+- **Keyboard**: ten packs — Thock (deep), Clack (clacky), Felt (quiet),
+  Typewriter, Cream (soft and round), Marble (bright and crisp), Spring (IBM
+  Model M), Laptop (flat and thin), Wood (warm and hollow), Bubble (all pop)
+- **Mouse click**: ten clicks to choose from — classic, soft, sharp, heavy,
+  retro, gaming, tick, clacky, hollow, trackpad — or *None* to hear the keyboard
+  only
 - **Volume**
-- **Lancer au démarrage**
+- **Open at login**
 
-Chaque son existe en trois variantes tirées au hasard, avec un volume légèrement
-différent à chaque frappe : deux touches ne sonnent jamais exactement pareil. La
-barre d'espace a son propre son, plus grave, comme sur un vrai clavier.
+Every sound comes in three variants picked at random, with a slightly different
+volume on each keystroke: no two keys ever sound exactly the same. The space bar
+has its own, deeper sound, like on a real keyboard.
 
-## Changer les sons
+## Changing the sounds
 
-Les sons sont fabriqués par `tools/make_sounds.py` (aucune dépendance). Modifier
-les recettes en haut du fichier, puis :
+The sounds are built by `tools/make_sounds.py` (no dependencies). Edit the
+recipes at the top of the file, then:
 
 ```
 python3 tools/make_sounds.py && ./build.sh
 ```
 
-Pour tester sans reconstruire l'app, déposer ses propres fichiers dans
-`~/Library/Application Support/Clack/Sounds/`, en gardant la même arborescence
-(`thock/down-1.wav`, `up-1.wav`, `space-1.wav`, etc.). L'app les prend en priorité,
-et remplace alors *tous* les sons : ce dossier doit contenir les packs voulus au
-complet. Un dossier dont le nom commence par `mouse` est proposé comme clic de
-souris et n'a pas besoin de `space-*.wav`.
+To try things out without rebuilding the app, drop your own files into
+`~/Library/Application Support/Clack/Sounds/`, keeping the same layout
+(`thock/down-1.wav`, `up-1.wav`, `space-1.wav`, and so on). The app picks those
+first, and then replaces *every* sound: that folder must contain the packs you
+want, complete. A folder whose name starts with `mouse` is offered as a mouse
+click and does not need `space-*.wav`.
 
-## Reconstruire
+## Rebuilding
 
-Chaque `./build.sh` change l'identité de l'app aux yeux de macOS, donc l'autorisation
-est à redonner. Le script efface l'ancienne pour qu'une nouvelle demande apparaisse
-au lieu d'une case cochée qui ne marche plus. Un certificat Apple Developer ID
-supprimerait cette étape.
+Every `./build.sh` changes the identity of the app in the eyes of macOS, so the
+permission has to be granted again. The script deletes the old one so that a new
+request appears instead of a ticked box that no longer works. An Apple Developer
+ID certificate would remove this step.
